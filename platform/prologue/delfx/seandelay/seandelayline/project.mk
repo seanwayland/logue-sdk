@@ -2,11 +2,11 @@
 # Project Customization
 # #############################################################################
 
-PROJECT = seandelayline
+PROJECT = seandelayline2
 
 UCSRC = 
 
-UCXXSRC = ../src/seandelayline.cpp
+UCXXSRC = ../src/seandelayline2.cpp
 
 UINCDIR =
 
