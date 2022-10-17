@@ -1,18 +1,10 @@
 
 /*
  * File: bpmdelay.cpp
- *
- * A simple BPM sync'd 2 channel delay for the NTS-1
- * 
- * Note, this delay uses the dry/wet (shift-B) to set the wet / dry ratio
- * 
- * 
  * hammondeggsmusic.ca 2021
- *
  */
 
 #include "userdelfx.h" 
-
 
 // Defines
 #define NUM_DELAY_DIVISIONS      15       // # of bpm divisions in table
@@ -23,14 +15,8 @@
 #define NUM_NOTES_PER_BEAT       4        // The xd/prologue use quarter notes, hence '4'.
 #define SAMPLE_RATE              48000    // 48KHz is our fixed sample rate (the const k_samplerate is only listed in the osc_api.h not the fx_api.h)
 
-
 #define PSEUDO_STEREO_OFFSET (float)SAMPLE_RATE * .01f    // How much time to offset the right channel in seconds for pseudo stereo(.01 = 10ms) 
 
-
-// Delay BPM division with time knob from 0 to full:
-// 1/64, 1/48, 1/32, 1/24, 1/16, 1/12, 1/8, 1/6, 3/16, 1/4, 1/3, 3/8, 1/2, 3/4, 1
-float delayDivisions[NUM_DELAY_DIVISIONS] = 
-{0.015625,.02083333,.03125,.04166666,.0625f,.08333333f,.125f,.16666667f,.1875f,.25f,.33333333f,.375f,.5f,.75f,1};
 
 // Delay lines for left / right channel
 __sdram float delayLine_L[DELAY_LINE_SIZE];
@@ -38,14 +24,23 @@ __sdram float delayLine_R[DELAY_LINE_SIZE];
 
 // Current position in the delay line we are writing to:
 // (integer value as it is per-sample)
-uint32_t delayLine_Wr = 0;
+uint32_t delayLine_Wr1 = 0;
+uint32_t delayLine_Wr2 = 0;
+uint32_t delayLine_Wr3 = 0;
+uint32_t delayLine_Wr4 = 0;
 
 // Smoothing (glide) for delay time:
 // This is the current delay time as we smooth it
-float currentDelayTime = 48000; 
+float currentDelayTime1 = 48000; 
+float currentDelayTime2= 48000; 
+float currentDelayTime3= 48000; 
+float currentDelayTime4= 48000; 
 
 // This is the delay time we actually wish to set to
-float targetDelayTime = 48000;
+float targetDelayTime1 = 48000;
+float targetDelayTime2 = 48000;
+float targetDelayTime3 = 48000;
+float targetDelayTime4 = 48000;
 
 // Depth knob value from 0-1
 float valDepth = 0;
@@ -57,8 +52,9 @@ float valTime = 0;
 float multiplier = 1;
 
 // Wet/Dry signal levels
-float wet = .5;
-float dry = .5;
+float wet = .2;
+float dry = .6;
+float wet_mix = .5;
 
  
 ////////////////////////////////////////////////////////////////////////
@@ -68,7 +64,7 @@ float dry = .5;
 void DELFX_INIT(uint32_t platform, uint32_t api)
 {
    // Initialize the variables used
-   delayLine_Wr = 0;
+   delayLine_Wr1 = delayLine_Wr2 = delayLine_Wr3 = delayLine_Wr3=0;
 
    // Clear the delay lines. If you don't do this, it is entirely possible that "something" will already be there, and you might
    // get either old delay sounds, or very unpleasant noises from a previous effects. 
@@ -78,17 +74,17 @@ void DELFX_INIT(uint32_t platform, uint32_t api)
       delayLine_R[i] = 0;
    }
 
-   
-   currentDelayTime = SAMPLE_RATE; 
-   targetDelayTime = SAMPLE_RATE;
+   currentDelayTime1 = currentDelayTime2 = currentDelayTime3 = currentDelayTime4 = SAMPLE_RATE; 
+   targetDelayTime1 = targetDelayTime2 = targetDelayTime3 =  targetDelayTime3 =  SAMPLE_RATE;
 
    valDepth = 0;
    valTime = 0;
    multiplier = 1;
 
 
-   wet = 0.5f;
+   wet = 0.2f;
    dry = 0.5f;
+   wet_mix = 0.5f;
    
 }
 
@@ -132,9 +128,6 @@ float readFrac(const float pos, float *pDelayLine)
 
  
 
-
-
-
 ////////////////////////////////////////////////////////////////////////
 // DELFX_PROCESS
 // - Called for every buffer , process your samples here
@@ -146,32 +139,14 @@ void DELFX_PROCESS(float *xn, uint32_t frames)
    const float * x_e = x + 2*frames; // End of data buffer address
 
 
-   // *Any code here will be called ONCE per buffer. Typically there are 16 samples per buffer,
-   // but there is no reason this could not be more - or less.
-   // Get the BPM value here (it won't change (or if it does it won't matter terribly much...) 
-   // during the sample process loop below so no need to keep calling this
-   // while processing samples, saves some cpu time.)
-
-   //float bpmF = fx_get_bpmf(); //this is the bpm, in minutes
-
-
-   // Failsafe - since we are going to divide by bpmF it can never be zero. 
-   // It never is, but a good idea in my opinion to make sure.
-   // if (bpmF <= 0)
-   // {
-   //    // failsafe, set to a known safe value.
-   //    bpmF = MIN_BPM;
-   // }
-
-   
-   //Calculate the # of beats per second 
-   //float bpm_s = 60 / bpmF;
-
    // Calculate our delay time (as a float) by taking:
    //   The # of samples per second * the # of beats per second * the number of notes per second * our multiplier.
    //   note, the multiplier is 1 or lower, so this will result in a reduction only.
    //targetDelayTime = SAMPLE_RATE * bpm_s * NUM_NOTES_PER_BEAT * multiplier;
-   targetDelayTime = 12000;
+   targetDelayTime1 = 11000;
+   targetDelayTime2 = 16000;
+   targetDelayTime3 = 19200;
+   targetDelayTime4 = 25000;
    
           
    // Loop through the samples - for delay effects, you replace the value at *xn with your new value
@@ -182,14 +157,23 @@ void DELFX_PROCESS(float *xn, uint32_t frames)
       // - This gives the same effect as exponential 'glide'
 
       // Calculate the difference between the target and the current delay time
-      float delta = targetDelayTime - currentDelayTime;
+      float delta1 = targetDelayTime1 - currentDelayTime1;
+      float delta2 = targetDelayTime2 - currentDelayTime2;
+      float delta3 = targetDelayTime3 - currentDelayTime3;
+      float delta4 = targetDelayTime3 - currentDelayTime3;
 
       // Divide this by the glide rate (larger glide rates = longer glide times.)
       // Glide rate cannot be lower than 1!
-      delta /= DELAY_GLIDE_RATE;
+      delta1 /= DELAY_GLIDE_RATE;
+      delta2 /= DELAY_GLIDE_RATE;
+      delta3 /= DELAY_GLIDE_RATE;
+      delta4 /= DELAY_GLIDE_RATE;
 
-      // Add to our current delay time this delta. 
-      currentDelayTime += delta;   
+      // Add to our current delay time this delta1. 
+      currentDelayTime1 += delta1;   
+      currentDelayTime2 += delta2;   
+      currentDelayTime3 += delta3; 
+      currentDelayTime4 += delta4;   
 
       //Get our input signal values to the effect
 
@@ -206,41 +190,110 @@ void DELFX_PROCESS(float *xn, uint32_t frames)
       // to read sub-sample values from this delay line.
 
       // Calculate the read index (floating point so can have a fraction)
-      float readIndex = (float)delayLine_Wr - currentDelayTime;
+      float readIndex1 = (float)delayLine_Wr1 - currentDelayTime1;
+      float readIndex2 = (float)delayLine_Wr2 - currentDelayTime2;
+      float readIndex3 = (float)delayLine_Wr3 - currentDelayTime3;
+      float readIndex4 = (float)delayLine_Wr4 - currentDelayTime4;
 
       // Since this is a float we can't just mask it to account for rollover
       // - since we subtracted the index it could be negative - roll this value over
       // around the delay line
-      if (readIndex < 0)
+      if (readIndex1 < 0)
       {
          // Roll the pointer back to the end of the buffer (index)
-         readIndex += DELAY_LINE_SIZE_MASK;
+         readIndex1 += DELAY_LINE_SIZE_MASK;
+      }
+
+      if (readIndex2 < 0)
+      {
+         // Roll the pointer back to the end of the buffer (index)
+         readIndex2 += DELAY_LINE_SIZE_MASK;
+      }
+
+      if (readIndex3 < 0)
+      {
+         // Roll the pointer back to the end of the buffer (index)
+         readIndex3 += DELAY_LINE_SIZE_MASK;
+      }
+
+
+      if (readIndex4 < 0)
+      {
+         // Roll the pointer back to the end of the buffer (index)
+         readIndex4 += DELAY_LINE_SIZE_MASK;
       }
 
       //Read the delayed (behind) signal for the left channel
-      float delayLineSig_L = readFrac(readIndex, delayLine_L);
+      float delayLineSig_L1 = readFrac(readIndex1, delayLine_L);
 
       // Read the delayed (behind) signal for the right channel
-      float delayLineSig_R = readFrac(readIndex, delayLine_R);
+      float delayLineSig_R1 = readFrac(readIndex1, delayLine_R);
+
+            //Read the delayed (behind) signal for the left channel
+      float delayLineSig_L2 = readFrac(readIndex2, delayLine_L);
+
+      // Read the delayed (behind) signal for the right channel
+      float delayLineSig_R2 = readFrac(readIndex2, delayLine_R);
+
+                  //Read the delayed (behind) signal for the left channel
+      float delayLineSig_L3 = readFrac(readIndex3, delayLine_L);
+
+      // Read the delayed (behind) signal for the right channel
+      float delayLineSig_R3 = readFrac(readIndex3, delayLine_R);
+
+      //Read the delayed (behind) signal for the left channel
+      float delayLineSig_L4 = readFrac(readIndex4, delayLine_L);
+
+      // Read the delayed (behind) signal for the right channel
+      float delayLineSig_R4 = readFrac(readIndex4, delayLine_R);
 
       // Write to the delay line our input signal + the delayed signal * the feedback amount (valDepth)      
       // Left delay:
-      delayLine_L[delayLine_Wr] = sigInL + delayLineSig_L * valDepth; 
+      delayLine_L[delayLine_Wr1] = sigInL + delayLineSig_L1 * valDepth; 
       // Right delay:
-      delayLine_R[delayLine_Wr] = sigInR + delayLineSig_R * valDepth; 
+      delayLine_R[delayLine_Wr1] = sigInR + delayLineSig_R1 * valDepth; 
+
+      // Write to the delay line our input signal + the delayed signal * the feedback amount (valDepth)      
+      // Left delay:
+      delayLine_L[delayLine_Wr2] = sigInL + delayLineSig_L2 * valDepth; 
+      // Right delay:
+      delayLine_R[delayLine_Wr2] = sigInR + delayLineSig_R2 * valDepth; 
+
+            // Write to the delay line our input signal + the delayed signal * the feedback amount (valDepth)      
+      // Left delay:
+      delayLine_L[delayLine_Wr3] = sigInL + delayLineSig_L3 * valDepth; 
+      // Right delay:
+      delayLine_R[delayLine_Wr3] = sigInR + delayLineSig_R3 * valDepth; 
+
+      // Write to the delay line our input signal + the delayed signal * the feedback amount (valDepth)      
+      // Left delay:
+      delayLine_L[delayLine_Wr4] = sigInL + delayLineSig_L4 * valDepth; 
+      // Right delay:
+      delayLine_R[delayLine_Wr4] = sigInR + delayLineSig_R4 * valDepth; 
 
       // Increment and roll over our write index for the delay line 
       // This is an integer, and a power of 2 so we can simply mask the value by the DELAY_LINE_SIZE_MASK.
-      delayLine_Wr++;
-      delayLine_Wr &= DELAY_LINE_SIZE_MASK; 
+      delayLine_Wr1++;
+      delayLine_Wr1 &= DELAY_LINE_SIZE_MASK; 
+
+      delayLine_Wr2++;
+      delayLine_Wr2 &= DELAY_LINE_SIZE_MASK; 
+
+      delayLine_Wr3++;
+      delayLine_Wr3 &= DELAY_LINE_SIZE_MASK; 
+
+
+      delayLine_Wr4++;
+      delayLine_Wr4 &= DELAY_LINE_SIZE_MASK; 
+
 
     
       // Generate our output signal:
       // That is, the input signal * the dry level + (mixed with) the delayed signal * the wet level.
-      sigOutL = sigInL * dry + delayLineSig_L * wet;
+      sigOutL = sigInL * dry + ((delayLineSig_L1 + delayLineSig_R1 + delayLineSig_L2 ) * wet/3);
 
       // And again for the right channel
-      sigOutR = sigInR * dry + delayLineSig_R * wet;
+      sigOutR = sigInR * dry + (delayLineSig_R3 + delayLineSig_L4 ) * wet/3;
 
       // Store this result into the output buffer
       *x = sigOutL;
@@ -277,45 +330,12 @@ void DELFX_PROCESS(float *xn, uint32_t frames)
 ////////////////////////////////////////////////////////////////////////////////////
 void DELFX_PARAM(uint8_t index, int32_t value)
 {
-   
-   // Convert the int32_t (q31 fixed point) value we're given to a float from 0-1
-   // Note - if you wish to declare variables to use in the switch statement, you may
-   // need to declare them here, the compiler may throw an error if you try to declare
-   // it within the case statements etc. 
    const float valf = q31_to_f32(value);
-   float f; // Temp value used for calculations
-   float s_mix; // Used for wet/dry calculations
-   int divIndex; // Integer value for delay time multiplier (division really as the value is 1 or <1) table index
-   // Select which parameter to work with:
+
    switch (index) 
    {
-      case k_user_delfx_param_time:
-         ////////////////////////////
-         // "A" / TIME KNOB
-         ////////////////////////////
-         // Calculate the coarse delay time (via the divisions table)
 
-         //Store this 0-1 value in case we need it for something else (currently we do not)
-         valTime = valf;
-
-         // Convert the 0-1 value into an array index (e.g. there are 15 divisions, so we need an index value from 0-14)         
-         f = valf;
-         f *= NUM_DELAY_DIVISIONS - 1; //0-14 15 delay divisions
-
-         // Set an integer value for our table index
-         divIndex = (int)f;
-         
-         // Failsafe, ensure it is within a valid range (it always is though)
-         if ((divIndex >= NUM_DELAY_DIVISIONS) || (divIndex < 0))
-         {
-            divIndex = NUM_DELAY_DIVISIONS - 1;//failsafe
-         }
-
-         // Get the time multiplier from the division table.
-         multiplier = delayDivisions[divIndex];
-         break;
-
-      case k_user_delfx_param_depth:      
+         case k_user_delfx_param_depth:      
          ////////////////////////////
          // "B" / DEPTH KNOB
          ////////////////////////////
@@ -324,45 +344,30 @@ void DELFX_PARAM(uint8_t index, int32_t value)
          valDepth = valf;
          break;
 
-      case k_user_delfx_param_shift_depth:         
-         ////////////////////////////////
-         // "DELAY+B" / SHIFT-DEPTH KNOB
-         ////////////////////////////////
-         // For delays this is wet/dry, though you can technically use this 3rd parameter for whatever you want!
-         //Left side of the knob (all dry to full mix)
-         // Adapted from the korg example, this allows us to get a 50/50 split at full mix but a higher level for
-         // full wet / full dry. 
+         case k_user_delfx_param_time:
+         ////////////////////////////
+         // "A" / TIME KNOB
+         ////////////////////////////
+         // Calculate the coarse delay time (via the divisions table)
 
-         // I've expanded the korg example here to make it a bit easier to follow
-         //s_mix = (valf <= 0.49f) ? 1.02040816326530612244f * valf : (valf >= 0.51f) ? 0.5f + 1.02f * (valf-0.51f) : 0.5f;    
-         
-         // Are we at the left half of the knob position?
-         if (valf <= 0.49f)
-         {
-            // Yes, amplify the mix value slightly
-            s_mix = 1.02040816326530612244f * valf;
-         }
-         // No, are we at the right half of the knob position?
-         else if (valf >= 0.51f) 
-         {
-            // Yes, amplify the mix value but also invert it and subtract the 0.51 offset from it (so the mix value will decrease when turning the knob higher)
-            s_mix = 0.5f + 1.02f * (valf-0.51f);
-         }
-         else
-         {
-            // Midpoint, set the mix value to 50%
-            s_mix =  0.5f; 
-         }
-         // Calculate our wet / dry values
-         dry = 1.0f - s_mix; 
-         wet = s_mix;         
+         //Store this 0-1 value in case we need it for something else (currently we do not)
+         wet_mix = valf;
+         dry = 1.0f - wet_mix; 
+         wet = wet_mix;    
+
+
          break;
 
-      default:
+         case k_user_delfx_param_shift_depth: 
+
+         break;
+         default:
          // no default handling, there is no case for this.         
          break;
    }
+   
 }
+
 
 
 
