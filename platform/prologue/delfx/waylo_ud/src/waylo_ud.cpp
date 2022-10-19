@@ -5,6 +5,7 @@
  */
 
 #include "userdelfx.h" 
+#include "simplelfo.hpp"
 
 // Defines
 #define NUM_DELAY_DIVISIONS      15       // # of bpm divisions in table
@@ -15,12 +16,49 @@
 #define NUM_NOTES_PER_BEAT       4        // The xd/prologue use quarter notes, hence '4'.
 #define SAMPLE_RATE              48000    // 48KHz is our fixed sample rate (the const k_samplerate is only listed in the osc_api.h not the fx_api.h)
 
-#define PSEUDO_STEREO_OFFSET (float)SAMPLE_RATE * .01f    // How much time to offset the right channel in seconds for pseudo stereo(.01 = 10ms) 
+#define PSEUDO_STEREO_OFFSET (float)SAMPLE_RATE * .01f    // How much time to offset the right channel in seconds for pseudo stereo(.01 = 10ms)
+
+
+// LFO STUFF 
+static dsp::SimpleLFO s_lfo1;
+static dsp::SimpleLFO s_lfo2;
+static dsp::SimpleLFO s_lfo3;
+static dsp::SimpleLFO s_lfo4;
+
+enum {
+  k_sin = 0,
+  k_tri,
+  k_saw,
+  k_sqr,
+  k_sin_uni,
+  k_tri_uni,
+  k_saw_uni,
+  k_sqr_uni,
+  k_sin_off,
+  k_tri_off,
+  k_saw_off,
+  k_sqr_off,
+  k_wave_count
+};
+
+static uint8_t s_lfo_wave1;
+static uint8_t s_lfo_wave2;
+static uint8_t s_lfo_wave3;
+static uint8_t s_lfo_wave4;
+static float s_param_z, s_param;
+static const float s_fs_recip = 1.f / 48000.f;
+
+float wave1;
+float wave2;
+float wave3;
+float wave4;
 
 
 // Delay lines for left / right channel
 __sdram float delayLine_L[DELAY_LINE_SIZE];
 __sdram float delayLine_R[DELAY_LINE_SIZE];
+
+
 
 // Current position in the delay line we are writing to:
 // (integer value as it is per-sample)
@@ -81,6 +119,23 @@ float reverb_mix = 0.5;
 ////////////////////////////////////////////////////////////////////////
 void DELFX_INIT(uint32_t platform, uint32_t api)
 {
+
+
+   // lfo stuff 
+
+   s_lfo1.reset();
+   s_lfo1.setF0(5.5f,s_fs_recip);
+
+   s_lfo2.reset();
+   s_lfo2.setF0(6.5f,s_fs_recip);
+
+   s_lfo3.reset();
+   s_lfo3.setF0(7.f,s_fs_recip);
+
+   s_lfo4.reset();
+   s_lfo4.setF0(8.f,s_fs_recip);
+
+
    // Initialize the variables used
    delayLine_Wr1 = delayLine_Wr2 = delayLine_Wr3 = delayLine_Wr3=0;
 
@@ -106,9 +161,9 @@ void DELFX_INIT(uint32_t platform, uint32_t api)
    multiplier = 1;
 
 
-   wet = 0.2f;
-   dry = 0.5f;
-   wet_mix = 0.5f;
+   wet = 0.3f;
+   dry = 0.6f;
+   wet_mix = 0.4f;
    reverb_mix = 0.5f;
    
 }
@@ -160,6 +215,29 @@ float readFrac(const float pos, float *pDelayLine)
 void DELFX_PROCESS(float *xn, uint32_t frames)
 {
 
+   // lfo stuff 
+
+   s_lfo1.cycle();
+   s_lfo2.cycle();
+   s_lfo3.cycle();
+   s_lfo4.cycle();
+
+
+
+   wave1 = s_lfo1.sine_bi();
+   wave2 = s_lfo2.sine_bi();
+   wave3 = s_lfo3.sine_bi();
+   wave4 = s_lfo4.sine_bi();
+
+
+
+   wave1 *= 0.35f;
+   wave2 *= 0.35f;
+   wave3 *= 0.35f;
+   wave4 *= 0.35f;
+
+   // end lfo stuff
+
    float * __restrict x = xn; // Local pointer, pointer xn copied here. 
    const float * x_e = x + 2*frames; // End of data buffer address
 
@@ -173,10 +251,10 @@ void DELFX_PROCESS(float *xn, uint32_t frames)
    targetDelayTime3 = 19200;
    targetDelayTime4 = 25000;
 
-   targetDelayTime5 = 1100;
-   targetDelayTime6 = 1600;
-   targetDelayTime7 = 1920;
-   targetDelayTime8 = 2500;
+   targetDelayTime5 = 1300*(1+ wave1);
+   targetDelayTime6 = 1500*(1+ wave2);
+   targetDelayTime7 = 1750*(1+ wave3);
+   targetDelayTime8 = 2000*(1+ wave4);
    
           
    // Loop through the samples - for delay effects, you replace the value at *xn with your new value
@@ -215,10 +293,10 @@ void DELFX_PROCESS(float *xn, uint32_t frames)
       currentDelayTime3 += delta3; 
       currentDelayTime4 += delta4;   
 
-      currentDelayTime5+= delta1;   
-      currentDelayTime6 += delta2;   
-      currentDelayTime7 += delta3; 
-      currentDelayTime8 += delta4; 
+      currentDelayTime5+= delta5;   
+      currentDelayTime6 += delta6;   
+      currentDelayTime7 += delta7; 
+      currentDelayTime8 += delta8; 
 
       //Get our input signal values to the effect
 
@@ -428,10 +506,10 @@ void DELFX_PROCESS(float *xn, uint32_t frames)
     
       // Generate our output signal:
       // That is, the input signal * the dry level + (mixed with) the delayed signal * the wet level.
-      sigOutL = sigInL * dry + ((delayLineSig_L5 + delayLineSig_R6  ) * wet/3);
+      sigOutL = sigInL * dry + ((delayLineSig_L5  + delayLineSig_L6 + delayLineSig_R5) * wet);
 
       // And again for the right channel
-      sigOutR = sigInR * dry + (delayLineSig_R7 + delayLineSig_L8 ) * wet/3;
+      sigOutR = sigInR * dry + ((delayLineSig_R7 + delayLineSig_L7   + delayLineSig_L8) * wet);
 
       // Store this result into the output buffer
       *x = sigOutL;
