@@ -107,8 +107,8 @@ float valReverb = 0;
 float multiplier = 1;
 
 // Wet/Dry signal levels
-float wet = .2;
-float dry = .6;
+float wet = .8;
+float dry = .4;
 float wet_mix = .5;
 float reverb_mix = 0.5;
 
@@ -123,17 +123,19 @@ void DELFX_INIT(uint32_t platform, uint32_t api)
 
    // lfo stuff 
 
+   float speed_param = 17.f;
+
    s_lfo1.reset();
-   s_lfo1.setF0(5.5f,s_fs_recip);
+   s_lfo1.setF0(3.5f*speed_param,s_fs_recip);
 
    s_lfo2.reset();
-   s_lfo2.setF0(6.5f,s_fs_recip);
+   s_lfo2.setF0(4.0f*speed_param,s_fs_recip);
 
    s_lfo3.reset();
-   s_lfo3.setF0(7.f,s_fs_recip);
+   s_lfo3.setF0(4.0f*speed_param,s_fs_recip);
 
    s_lfo4.reset();
-   s_lfo4.setF0(8.f,s_fs_recip);
+   s_lfo4.setF0(3.7f*speed_param,s_fs_recip);
 
 
    // Initialize the variables used
@@ -229,12 +231,15 @@ void DELFX_PROCESS(float *xn, uint32_t frames)
    wave3 = s_lfo3.sine_bi();
    wave4 = s_lfo4.sine_bi();
 
+   
+   float mod_depth = 16.f;
+   wave1 = (wave1 + 1)/mod_depth;
+   wave2 = (wave2 + 1)/mod_depth;
+   wave3 = ((wave3 + 1)/mod_depth)*1.5;
+   wave4 = (wave4 + 1)/mod_depth;
+   
 
 
-   wave1 *= 0.35f;
-   wave2 *= 0.35f;
-   wave3 *= 0.35f;
-   wave4 *= 0.35f;
 
    // end lfo stuff
 
@@ -251,10 +256,12 @@ void DELFX_PROCESS(float *xn, uint32_t frames)
    targetDelayTime3 = 19200;
    targetDelayTime4 = 25000;
 
-   targetDelayTime5 = 1300*(1+ wave1);
-   targetDelayTime6 = 1500*(1+ wave2);
-   targetDelayTime7 = 1750*(1+ wave3);
-   targetDelayTime8 = 2000*(1+ wave4);
+   float delay_time_adjust = 1.25;
+
+   targetDelayTime5 = 1133*(1+ wave1)*delay_time_adjust;
+   targetDelayTime6 = 1440*(1+ wave2)*delay_time_adjust;
+   targetDelayTime7 = 1728*(1+ wave3)*delay_time_adjust;
+   targetDelayTime8 = 1344*(1+ wave4)*delay_time_adjust;
    
           
    // Loop through the samples - for delay effects, you replace the value at *xn with your new value
@@ -506,10 +513,10 @@ void DELFX_PROCESS(float *xn, uint32_t frames)
     
       // Generate our output signal:
       // That is, the input signal * the dry level + (mixed with) the delayed signal * the wet level.
-      sigOutL = sigInL * dry + ((delayLineSig_L5  + delayLineSig_L6 + delayLineSig_R5) * wet);
+      sigOutL = sigInL * dry + ((delayLineSig_L5  + delayLineSig_L7*0.3 +  delayLineSig_L6 ) * wet);
 
       // And again for the right channel
-      sigOutR = sigInR * dry + ((delayLineSig_R7 + delayLineSig_L7   + delayLineSig_L8) * wet);
+      sigOutR = sigInR * dry + ((delayLineSig_R7 +   delayLineSig_R6*0.3 + delayLineSig_L8) * wet);
 
       // Store this result into the output buffer
       *x = sigOutL;
