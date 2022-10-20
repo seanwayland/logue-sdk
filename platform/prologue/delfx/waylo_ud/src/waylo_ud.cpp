@@ -8,12 +8,10 @@
 #include "simplelfo.hpp"
 
 // Defines
-#define NUM_DELAY_DIVISIONS      15       // # of bpm divisions in table
+
 #define DELAY_LINE_SIZE          0x40000  // Delay line size (*must be a power of 2)
 #define DELAY_LINE_SIZE_MASK     0x3FFFF  // Mask for the delay line size for rollover
 #define DELAY_GLIDE_RATE         12000    //  this value must not be lower than 1. larger values = slower glide rates for delay time
-#define MIN_BPM                  56       // failsafe, likely never used
-#define NUM_NOTES_PER_BEAT       4        // The xd/prologue use quarter notes, hence '4'.
 #define SAMPLE_RATE              48000    // 48KHz is our fixed sample rate (the const k_samplerate is only listed in the osc_api.h not the fx_api.h)
 
 #define PSEUDO_STEREO_OFFSET (float)SAMPLE_RATE * .01f    // How much time to offset the right channel in seconds for pseudo stereo(.01 = 10ms)
@@ -25,21 +23,6 @@ static dsp::SimpleLFO s_lfo2;
 static dsp::SimpleLFO s_lfo3;
 static dsp::SimpleLFO s_lfo4;
 
-enum {
-  k_sin = 0,
-  k_tri,
-  k_saw,
-  k_sqr,
-  k_sin_uni,
-  k_tri_uni,
-  k_saw_uni,
-  k_sqr_uni,
-  k_sin_off,
-  k_tri_off,
-  k_saw_off,
-  k_sqr_off,
-  k_wave_count
-};
 
 static uint8_t s_lfo_wave1;
 static uint8_t s_lfo_wave2;
@@ -100,17 +83,27 @@ float valDepth = 0;
 // Time value knob from 0-1
 float valTime = 0;
 
-// Time value knob from 0-1
-float valReverb = 0;
+float valShift = 0;
 
-// Delay time multiplier (will be pulled from delayDivisions table)
-float multiplier = 1;
+
+
+float reverbLeft = 1.f;
+float reverbRight = 1.f;
+float chorusLeft = 1.f;
+float chorusRight = 1.f;
 
 // Wet/Dry signal levels
 float wet = .8;
 float dry = .4;
-float wet_mix = .5;
-float reverb_mix = 0.5;
+
+float wet_mix = .1;
+// scale from 0 to 0.5 ie val / 2 
+float reverb_mix = 0.2;
+
+float speed_param = 17.f;
+float mod_depth = 16.f;
+
+float timeval = .5f;
 
  
 ////////////////////////////////////////////////////////////////////////
@@ -122,8 +115,8 @@ void DELFX_INIT(uint32_t platform, uint32_t api)
 
 
    // lfo stuff 
-
-   float speed_param = 17.f;
+   // change from 10 to 50 with time dial ie 5 + val * 5 
+   
 
    s_lfo1.reset();
    s_lfo1.setF0(3.5f*speed_param,s_fs_recip);
@@ -159,14 +152,14 @@ void DELFX_INIT(uint32_t platform, uint32_t api)
 
    valDepth = 0;
    valTime = 0;
-   valReverb = 0;
-   multiplier = 1;
+   valShift = .5;
+
 
 
    wet = 0.3f;
    dry = 0.6f;
    wet_mix = 0.4f;
-   reverb_mix = 0.5f;
+   reverb_mix = 0.2f;
    
 }
 
@@ -231,8 +224,8 @@ void DELFX_PROCESS(float *xn, uint32_t frames)
    wave3 = s_lfo3.sine_bi();
    wave4 = s_lfo4.sine_bi();
 
+   // change from 15 to 30 with a number ie 15 + val * 2 
    
-   float mod_depth = 16.f;
    wave1 = (wave1 + 1)/mod_depth;
    wave2 = (wave2 + 1)/mod_depth;
    wave3 = ((wave3 + 1)/mod_depth)*1.5;
@@ -256,7 +249,7 @@ void DELFX_PROCESS(float *xn, uint32_t frames)
    targetDelayTime3 = 19200;
    targetDelayTime4 = 25000;
 
-   float delay_time_adjust = 1.25;
+   float delay_time_adjust = 0.8;
 
    targetDelayTime5 = 1133*(1+ wave1)*delay_time_adjust;
    targetDelayTime6 = 1440*(1+ wave2)*delay_time_adjust;
@@ -432,54 +425,54 @@ void DELFX_PROCESS(float *xn, uint32_t frames)
       // Read the delayed (behind) signal for the right channel
       float delayLineSig_R8 = readFrac(readIndex8, delayLine_R);
 
+      //Write to the delay line our input signal + the delayed signal * the feedback amount (valDepth)      
+      //Left delay:
+      delayLine_L[delayLine_Wr1] = sigInL + (delayLineSig_L1 * valShift*4); 
+      // Right delay:
+      delayLine_R[delayLine_Wr1] = sigInR + (delayLineSig_R1 * valShift*4); 
+
       // Write to the delay line our input signal + the delayed signal * the feedback amount (valDepth)      
       // Left delay:
-      // delayLine_L[delayLine_Wr1] = sigInL + delayLineSig_L1 * valDepth; 
-      // // Right delay:
-      // delayLine_R[delayLine_Wr1] = sigInR + delayLineSig_R1 * valDepth; 
-
-      // // Write to the delay line our input signal + the delayed signal * the feedback amount (valDepth)      
-      // // Left delay:
-      // delayLine_L[delayLine_Wr2] = sigInL + delayLineSig_L2 * valDepth; 
-      // // Right delay:
-      // delayLine_R[delayLine_Wr2] = sigInR + delayLineSig_R2 * valDepth; 
-
-      //       // Write to the delay line our input signal + the delayed signal * the feedback amount (valDepth)      
-      // // Left delay:
-      // delayLine_L[delayLine_Wr3] = sigInL + delayLineSig_L3 * valDepth; 
-      // // Right delay:
-      // delayLine_R[delayLine_Wr3] = sigInR + delayLineSig_R3 * valDepth; 
-
-      // // Write to the delay line our input signal + the delayed signal * the feedback amount (valDepth)      
-      // // Left delay:
-      // delayLine_L[delayLine_Wr4] = sigInL + delayLineSig_L4 * valDepth; 
-      // // Right delay:
-      // delayLine_R[delayLine_Wr4] = sigInR + delayLineSig_R4 * valDepth; 
-
+      delayLine_L[delayLine_Wr2] = sigInL + (delayLineSig_L2 * valShift*4); 
+      // Right delay:
+      delayLine_R[delayLine_Wr2] = sigInR + (delayLineSig_R2 * valShift*4); 
 
             // Write to the delay line our input signal + the delayed signal * the feedback amount (valDepth)      
       // Left delay:
-      delayLine_L[delayLine_Wr5] = sigInL + delayLineSig_L5 * valDepth; 
+      delayLine_L[delayLine_Wr3] = sigInL + (delayLineSig_L3 * valShift*4); 
       // Right delay:
-      delayLine_R[delayLine_Wr5] = sigInR + delayLineSig_R5 * valDepth; 
+      delayLine_R[delayLine_Wr3] = sigInR + (delayLineSig_R3 * valShift*4); 
 
       // Write to the delay line our input signal + the delayed signal * the feedback amount (valDepth)      
       // Left delay:
-      delayLine_L[delayLine_Wr6] = sigInL + delayLineSig_L6 * valDepth; 
+      delayLine_L[delayLine_Wr4] = sigInL + (delayLineSig_L4 * valShift*4); 
       // Right delay:
-      delayLine_R[delayLine_Wr6] = sigInR + delayLineSig_R6 * valDepth; 
+      delayLine_R[delayLine_Wr4] = sigInR + (delayLineSig_R4 * valShift*4); 
+
+
+     //       Write to the delay line our input signal + the delayed signal * the feedback amount (valDepth)      
+      //Left delay:
+      delayLine_L[delayLine_Wr5] = sigInL  ; 
+      // Right delay:
+      delayLine_R[delayLine_Wr5] = sigInR  ; 
+
+      // Write to the delay line our input signal + the delayed signal * the feedback amount (valDepth)      
+      // Left delay:
+      delayLine_L[delayLine_Wr6] = sigInL ; 
+      // Right delay:
+      delayLine_R[delayLine_Wr6] = sigInR ; 
 
             // Write to the delay line our input signal + the delayed signal * the feedback amount (valDepth)      
       // Left delay:
-      delayLine_L[delayLine_Wr7] = sigInL + delayLineSig_L7 * valDepth; 
+      delayLine_L[delayLine_Wr7] = sigInL  ; 
       // Right delay:
-      delayLine_R[delayLine_Wr7] = sigInR + delayLineSig_R7 * valDepth; 
+      delayLine_R[delayLine_Wr7] = sigInR ; 
 
       // Write to the delay line our input signal + the delayed signal * the feedback amount (valDepth)      
       // Left delay:
-      delayLine_L[delayLine_Wr8] = sigInL + delayLineSig_L8 * valDepth; 
+      delayLine_L[delayLine_Wr8] = sigInL  ; 
       // Right delay:
-      delayLine_R[delayLine_Wr8] = sigInR + delayLineSig_R8 * valDepth; 
+      delayLine_R[delayLine_Wr8] = sigInR  ; 
 
       // Increment and roll over our write index for the delay line 
       // This is an integer, and a power of 2 so we can simply mask the value by the DELAY_LINE_SIZE_MASK.
@@ -509,14 +502,21 @@ void DELFX_PROCESS(float *xn, uint32_t frames)
       delayLine_Wr8++;
       delayLine_Wr8 &= DELAY_LINE_SIZE_MASK; 
 
-
+      reverb_mix = valShift/10;
     
       // Generate our output signal:
+      reverbLeft = (delayLineSig_L1 + delayLineSig_L2)*reverb_mix;
+      reverbRight = (delayLineSig_R3 + delayLineSig_R4)*reverb_mix;
+      chorusLeft = (delayLineSig_L5  + delayLineSig_L7*0.3 +  delayLineSig_L6)*3;
+      chorusRight = (delayLineSig_R7 +   delayLineSig_R6*0.3 + delayLineSig_L8)*3;
+      
       // That is, the input signal * the dry level + (mixed with) the delayed signal * the wet level.
-      sigOutL = sigInL * dry + ((delayLineSig_L5  + delayLineSig_L7*0.3 +  delayLineSig_L6 ) * wet);
+      sigOutL = sigInL * dry + (reverbLeft + chorusLeft)*wet;
+      //sigOutL = sigInL * dry + (reverbLeft)*wet;
 
       // And again for the right channel
-      sigOutR = sigInR * dry + ((delayLineSig_R7 +   delayLineSig_R6*0.3 + delayLineSig_L8) * wet);
+      sigOutR = sigInR * dry + (reverbRight + chorusRight)*wet;
+      //sigOutR = sigInR * dry + (reverbRight)*wet;
 
       // Store this result into the output buffer
       *x = sigOutL;
@@ -564,7 +564,12 @@ void DELFX_PARAM(uint8_t index, int32_t value)
          ////////////////////////////
          // Set the delay feedback (0-1, tbd if i use an exp table)   
          // Just store this value for the DSP loop to use.
-         valDepth = valf;
+
+         wet_mix = valf;
+         dry = 1.0f - wet_mix; 
+         wet = wet_mix; 
+          
+
          break;
 
          case k_user_delfx_param_time:
@@ -574,14 +579,33 @@ void DELFX_PARAM(uint8_t index, int32_t value)
          // Calculate the coarse delay time (via the divisions table)
 
          //Store this 0-1 value in case we need it for something else (currently we do not)
-         wet_mix = valf;
-         dry = 1.0f - wet_mix; 
-         wet = wet_mix;    
+         
+         // change from 10 to 50 with time dial ie 5 + val * 5 
+         timeval = valf;
+         speed_param = 5 + timeval*10;
+
+         s_lfo1.setF0(3.5f*speed_param,s_fs_recip);
 
 
+         s_lfo2.setF0(4.0f*speed_param,s_fs_recip);
+
+ 
+         s_lfo3.setF0(4.0f*speed_param,s_fs_recip);
+
+   
+         s_lfo4.setF0(3.7f*speed_param,s_fs_recip);
+
+         mod_depth = 10 + timeval*2;
+         // change from 15 to 30 with a number ie 1 + val * 2 
+  
          break;
 
          case k_user_delfx_param_shift_depth: 
+
+         valShift = valf*3;
+
+         
+
 
          break;
          default:
