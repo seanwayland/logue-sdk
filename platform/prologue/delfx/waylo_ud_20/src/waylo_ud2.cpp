@@ -369,14 +369,37 @@ void DELFX_PROCESS(float *xn, uint32_t frames)
 // 4 ON IN NOR 4->4 OFF SIN 40 OFF OFF 0 100 7.2 1 R10 10
 
 
-   targetDelayTime1 = 1104*(1+ wave1)*delay_time_adjust;
-   targetDelayTime2 = 1300*(1+ wave2)*delay_time_adjust;
-   targetDelayTime3 = 1440*(1+ wave3)*delay_time_adjust;
+   // targetDelayTime1 = 1104*(1+ wave1)*delay_time_adjust;
+   // targetDelayTime2 = 1300*(1+ wave2)*delay_time_adjust;
+   // targetDelayTime3 = 1440*(1+ wave3)*delay_time_adjust;
+   // targetDelayTime4 = 1920*(1+ wave4)*delay_time_adjust;
+   // targetDelayTime5 = 10500;
+   // targetDelayTime6 = 13500;
+   // targetDelayTime7 = 19200;
+   // targetDelayTime8 = 23500;
+
+
+   // targetDelayTime1 = 1404*(1+ wave1)*delay_time_adjust;
+   // targetDelayTime2 = 1600*(1+ wave2)*delay_time_adjust;
+   // targetDelayTime3 = 1740*(1+ wave3)*delay_time_adjust;
+   // targetDelayTime4 = 2220*(1+ wave4)*delay_time_adjust;
+   // targetDelayTime5 = 10500;
+   // targetDelayTime6 = 13500;
+   // targetDelayTime7 = 19200;
+   // targetDelayTime8 = 23500;
+
+   targetDelayTime1 = 1036.8*(1+ wave1)*delay_time_adjust;
+   targetDelayTime2 = 1392*(1+ wave2)*delay_time_adjust;
+   targetDelayTime3 = 2400*(1+ wave3)*delay_time_adjust;
    targetDelayTime4 = 1920*(1+ wave4)*delay_time_adjust;
    targetDelayTime5 = 10500;
    targetDelayTime6 = 13500;
    targetDelayTime7 = 19200;
    targetDelayTime8 = 23500;
+
+
+
+
 
 
    
