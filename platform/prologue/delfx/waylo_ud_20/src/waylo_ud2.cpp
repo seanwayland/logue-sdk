@@ -11,6 +11,7 @@
 
 
 #define DELAY_LINE_SIZE          0x20000 // Delay line size (*must be a power of 2)
+#define MATH_PI                  3.14159
 #define DELAY_LINE_SIZE_MASK     0x1FFFF // doobee do 
 #define DELAY_GLIDE_RATE         12000    //  this value must not be lower than 1. larger values = slower glide rates for delay time
 #define SAMPLE_RATE              48000    // 48KHz is our fixed sample rate (the const k_samplerate is only listed in the osc_api.h not the fx_api.h)
@@ -156,6 +157,10 @@ float timeval = .5f;
 
 float depth_scale = 1.0;
 
+static float state = 0;
+static const float cutoff_frequency = 400.0;
+static const float gain = cutoff_frequency / (2 * MATH_PI * SAMPLE_RATE);
+
 ////////////////////////////////////////////////////////////////////////
 // DELFX_INIT
 // - initialize the effect variables, including clearing the delay lines
@@ -263,6 +268,8 @@ void DELFX_INIT(uint32_t platform, uint32_t api)
    dry = 0.7f; 
    wet_mix = 0.4f;
    reverb_mix = 0.5f;
+
+
    
 }
 
@@ -300,6 +307,16 @@ float readFrac(const float pos, float *pDelayLine)
    // Using the logue-sdk linear interpolation function, get the linearly-interpolated result of the two sample values.
    float r = linintf(frac, s0, s1);
    return r;    
+}
+
+
+
+
+inline __attribute__((optimize("Ofast"),always_inline)) 
+float highpass(float input) {
+    float retval = input - state;
+    state += gain * retval;
+    return retval;
 }
 
 
@@ -670,12 +687,14 @@ void DELFX_PROCESS(float *xn, uint32_t frames)
       // chorusRight = (delayLineSig_R7  +  delayLineSig_L7 + delayLineSig_R8  + delayLineSig_L8);
       
       // That is, the input signal * the dry level + (mixed with) the delayed signal * the wet level.
-      sigOutL = sigInL * dry + (reverbLeft + chorusLeft)*wet;
+      sigOutL = sigInL * dry + highpass((reverbLeft + chorusLeft)*wet);
       //sigOutL = sigInL * dry + (reverbLeft)*wet;
+     // sigOutL =  (reverbLeft + chorusLeft)*wet;
 
       // And again for the right channel
-      sigOutR = sigInR * dry + (reverbRight + chorusRight)*wet;
+      sigOutR = sigInR * dry + highpass((reverbRight + chorusRight)*wet);
       //sigOutR = sigInR * dry + (reverbRight)*wet;
+      //sigOutR = (reverbRight + chorusRight)*wet;
 
       // Store this result into the output buffer
       *x = sigOutL;
@@ -737,9 +756,10 @@ void DELFX_PARAM(uint8_t index, int32_t value)
          // Set the delay feedback (0-1, tbd if i use an exp table)   
          // Just store this value for the DSP loop to use.
 
-         wet_mix = valf;
-         
-         wet = wet_mix*4; 
+      wet_mix = valf;
+      dry = 1.0f - wet_mix; 
+      wet = wet_mix;   
+
           
    
     break;
