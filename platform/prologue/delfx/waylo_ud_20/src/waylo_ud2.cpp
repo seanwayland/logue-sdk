@@ -396,23 +396,23 @@ void DELFX_PROCESS(float *xn, uint32_t frames)
    // targetDelayTime8 = 23500;
 
 
-   // targetDelayTime1 = 1404*(1+ wave1)*delay_time_adjust;
-   // targetDelayTime2 = 1600*(1+ wave2)*delay_time_adjust;
-   // targetDelayTime3 = 1740*(1+ wave3)*delay_time_adjust;
-   // targetDelayTime4 = 2220*(1+ wave4)*delay_time_adjust;
-   // targetDelayTime5 = 10500;
-   // targetDelayTime6 = 13500;
-   // targetDelayTime7 = 19200;
-   // targetDelayTime8 = 23500;
-
-   targetDelayTime1 = 1036.8*(1+ wave1)*delay_time_adjust;
-   targetDelayTime2 = 1392*(1+ wave2)*delay_time_adjust;
-   targetDelayTime3 = 2400*(1+ wave3)*delay_time_adjust;
-   targetDelayTime4 = 1920*(1+ wave4)*delay_time_adjust;
+   targetDelayTime1 = 404*(1+ wave1)*delay_time_adjust;
+   targetDelayTime2 = 600*(1+ wave2)*delay_time_adjust;
+   targetDelayTime3 = 740*(1+ wave3)*delay_time_adjust;
+   targetDelayTime4 = 1220*(1+ wave4)*delay_time_adjust;
    targetDelayTime5 = 10500;
    targetDelayTime6 = 13500;
    targetDelayTime7 = 19200;
    targetDelayTime8 = 23500;
+
+   // targetDelayTime1 = 1036.8*(1+ wave1)*delay_time_adjust;
+   // targetDelayTime2 = 1392*(1+ wave2)*delay_time_adjust;
+   // targetDelayTime3 = 2400*(1+ wave3)*delay_time_adjust;
+   // targetDelayTime4 = 1920*(1+ wave4)*delay_time_adjust;
+   // targetDelayTime5 = 10500;
+   // targetDelayTime6 = 13500;
+   // targetDelayTime7 = 19200;
+   // targetDelayTime8 = 23500;
 
 
 
@@ -747,7 +747,7 @@ void DELFX_PARAM(uint8_t index, int32_t value)
    s_lfo7.setF0(0.1f + 240.f * valf, s_fs_recip);
    s_lfo8.setF0(0.1f + 240.f * valf, s_fs_recip);
 
-   depth_scale = (valf + 0.001)*10;
+   depth_scale = (valf + 0.001)*50;
     break;
   case k_user_delfx_param_depth:
            ////////////////////////////
