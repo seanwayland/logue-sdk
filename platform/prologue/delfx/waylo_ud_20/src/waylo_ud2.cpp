@@ -747,7 +747,7 @@ void DELFX_PARAM(uint8_t index, int32_t value)
    s_lfo7.setF0(0.1f + 240.f * valf, s_fs_recip);
    s_lfo8.setF0(0.1f + 240.f * valf, s_fs_recip);
 
-   depth_scale = (valf + 0.001)*50;
+   depth_scale = (valf + 0.001)*150;
     break;
   case k_user_delfx_param_depth:
            ////////////////////////////
