@@ -55,9 +55,8 @@ int leadSound = 0;
 
 // Delay lines for left / right channel
 __sdram float delayLine_L[DELAY_LINE_SIZE];
-__sdram float delayLine_R[DELAY_LINE_SIZE];
 __sdram float delayLine_L2[DELAY_LINE_SIZE];
-__sdram float delayLine_R2[DELAY_LINE_SIZE];
+
 
 
 
@@ -115,19 +114,19 @@ float feedBack7 = 4.3;
 float feedBack8 = 3.4;
 
 
-float delaySpeed1 = 2.4f;
-float delaySpeed2 = 2.1f;
-float delaySpeed3 = 2.8f;
-float delaySpeed4 = 1.9f;
+float delaySpeed1 = 3.9f;
+float delaySpeed2 = 5.2f;
+float delaySpeed3 = 4.0f;
+float delaySpeed4 = 4.9f;
 float delaySpeed5 = 3.5f;
 float delaySpeed6 = 3.8f;
 float delaySpeed7 = 4.7f;
 float delaySpeed8 = 3.3f;
 
-float modDepth1 = 4.2;
-float modDepth2 = 4.3;
-float modDepth3 = 3.8;
-float modDepth4 = 4.1;
+float modDepth1 = 5;
+float modDepth2 = 5;
+float modDepth3 = 3.5;
+float modDepth4 = 3.5;
 float modDepth5 = 2.5;
 float modDepth6 = 2.5;
 float modDepth7 = 2.5;
@@ -208,13 +207,13 @@ void DELFX_INIT(uint32_t platform, uint32_t api)
    for (int i=0;i<DELAY_LINE_SIZE;i++)
    {
       delayLine_L[i] = 0;
-      delayLine_R[i] = 0;
+
    }
 
      for (int i=0;i<DELAY_LINE_SIZE;i++)
    {
       delayLine_L2[i] = 0;
-      delayLine_R2[i] = 0;
+
    }
 
 
@@ -396,10 +395,10 @@ void DELFX_PROCESS(float *xn, uint32_t frames)
    // targetDelayTime8 = 23500;
 
 
-   targetDelayTime1 = 404*(1+ wave1)*delay_time_adjust;
-   targetDelayTime2 = 600*(1+ wave2)*delay_time_adjust;
-   targetDelayTime3 = 740*(1+ wave3)*delay_time_adjust;
-   targetDelayTime4 = 1220*(1+ wave4)*delay_time_adjust;
+   targetDelayTime1 = 932*(1+ wave1)*delay_time_adjust;
+   targetDelayTime2 = 1240*(1+ wave2)*delay_time_adjust;
+   targetDelayTime3 = 1763*(1+ wave3)*delay_time_adjust;
+   targetDelayTime4 = 2113*(1+ wave4)*delay_time_adjust;
    targetDelayTime5 = 10500;
    targetDelayTime6 = 13500;
    targetDelayTime7 = 19200;
@@ -545,103 +544,84 @@ void DELFX_PROCESS(float *xn, uint32_t frames)
       //Read the delayed (behind) signal for the left channel
       float delayLineSig_L1 = readFrac(readIndex1, delayLine_L2);
 
-      // Read the delayed (behind) signal for the right channel
-      float delayLineSig_R1 = readFrac(readIndex1, delayLine_R2);
 
       //Read the delayed (behind) signal for the left channel
       float delayLineSig_L2 = readFrac(readIndex2, delayLine_L2);
 
-      // Read the delayed (behind) signal for the right channel
-      float delayLineSig_R2 = readFrac(readIndex2, delayLine_R2);
 
                   //Read the delayed (behind) signal for the left channel
       float delayLineSig_L3 = readFrac(readIndex3, delayLine_L2);
 
-      // Read the delayed (behind) signal for the right channel
-      float delayLineSig_R3 = readFrac(readIndex3, delayLine_R2);
+
 
       //Read the delayed (behind) signal for the left channel
       float delayLineSig_L4 = readFrac(readIndex4, delayLine_L2);
 
-      // Read the delayed (behind) signal for the right channel
-      float delayLineSig_R4 = readFrac(readIndex4, delayLine_R2);
+
 
             //Read the delayed (behind) signal for the left channel
       float delayLineSig_L5 = readFrac(readIndex5, delayLine_L);
 
-      // Read the delayed (behind) signal for the right channel
-      float delayLineSig_R5 = readFrac(readIndex5, delayLine_R);
+
 
             //Read the delayed (behind) signal for the left channel
       float delayLineSig_L6 = readFrac(readIndex6, delayLine_L);
 
-      // Read the delayed (behind) signal for the right channel
-      float delayLineSig_R6 = readFrac(readIndex6, delayLine_R);
+
 
       //Read the delayed (behind) signal for the left channel
       float delayLineSig_L7 = readFrac(readIndex7, delayLine_L);
 
-      // Read the delayed (behind) signal for the right channel
-      float delayLineSig_R7 = readFrac(readIndex7, delayLine_R);
 
       //Read the delayed (behind) signal for the left channel
       float delayLineSig_L8 = readFrac(readIndex8, delayLine_L);
 
-      // Read the delayed (behind) signal for the right channel
-      float delayLineSig_R8 = readFrac(readIndex8, delayLine_R);
+
 
       //Write to the delay line our input signal + the delayed signal * the feedback amount (valDepth)      
       //Left delay:
 
 
-      delayLine_L2[delayLine_Wr1] = sigInL + delayLineSig_L1*feedBack1*feedbackScale ; 
-      // Right delay:
-      delayLine_R2[delayLine_Wr1] = sigInR  + delayLineSig_R1*feedBack1*feedbackScale; 
+      delayLine_L2[delayLine_Wr1] = sigInL  + delayLineSig_L1*feedBack1*feedbackScale ; 
 
-      delayLine_L2[delayLine_Wr2] = sigInL + delayLineSig_L2*feedBack2*feedbackScale ; 
-      // Right delay:
-      delayLine_R2[delayLine_Wr2] = sigInR  + delayLineSig_R2*feedBack2*feedbackScale; 
+      delayLine_L2[delayLine_Wr2] = sigInL +  + delayLineSig_L2*feedBack2*feedbackScale ; 
 
 
 
             // Write to the delay line our input signal + the delayed signal * the feedback amount (valDepth)      
       // Left delay:
-      delayLine_L2[delayLine_Wr3] = sigInL + (delayLineSig_L3 * feedBack3*feedbackScale); 
+      delayLine_L2[delayLine_Wr3] = sigInL  + (delayLineSig_L3 * feedBack3*feedbackScale); 
       // Right delay:
-      delayLine_R2[delayLine_Wr3] = sigInR + (delayLineSig_R3 * feedBack3*feedbackScale); 
+
 
       // Write to the delay line our input signal + the delayed signal * the feedback amount (valDepth)      
       // Left delay:
-      delayLine_L2[delayLine_Wr4] = sigInL + (delayLineSig_L4 * feedBack4*feedbackScale); 
+      delayLine_L2[delayLine_Wr4] = sigInL  + (delayLineSig_L4 * feedBack4*feedbackScale); 
       // Right delay:
-      delayLine_R2[delayLine_Wr4] = sigInR + (delayLineSig_R4 * feedBack4*feedbackScale); 
 
          //    // Write to the delay line our input signal + the delayed signal * the feedback amount (valDepth)      
    //    // Left delay:
-      delayLine_L[delayLine_Wr5] = sigInL + delayLineSig_L5*feedBack5*feedbackScale ; 
+      delayLine_L[delayLine_Wr5] = sigInL   + delayLineSig_L5*feedBack5*feedbackScale ; 
       // Right delay:
-      delayLine_R[delayLine_Wr5] = sigInR  + delayLineSig_R5*feedBack5*feedbackScale; 
+
 
          //    // Write to the delay line our input signal + the delayed signal * the feedback amount (valDepth)      
    //    // Left delay:
-      delayLine_L[delayLine_Wr6] = sigInL + delayLineSig_L6*feedBack6*feedbackScale ; 
+      delayLine_L[delayLine_Wr6] = sigInL  + delayLineSig_L6*feedBack6*feedbackScale ; 
       // Right delay:
-      delayLine_R[delayLine_Wr6] = sigInR  + delayLineSig_R6*feedBack6*feedbackScale; 
+
 
          //    // Write to the delay line our input signal + the delayed signal * the feedback amount (valDepth)      
    //    // Left delay:
-      delayLine_L[delayLine_Wr7] = sigInL + delayLineSig_L7*feedBack7*feedbackScale ; 
+      delayLine_L[delayLine_Wr7] = sigInL  + delayLineSig_L7*feedBack7*feedbackScale ; 
       // Right delay:
-      delayLine_R[delayLine_Wr7] = sigInR  + delayLineSig_R7*feedBack8*feedbackScale; 
-
-
 
 
    //    // Write to the delay line our input signal + the delayed signal * the feedback amount (valDepth)      
    //    // Left delay:
       delayLine_L[delayLine_Wr8] = sigInL + delayLineSig_L8*feedBack8*feedbackScale ; 
       // Right delay:
-      delayLine_R[delayLine_Wr8] = sigInR  + delayLineSig_R8*feedBack8*feedbackScale; 
+
 
       // Increment and roll over our write index for the delay line 
       // This is an integer, and a power of 2 so we can simply mask the value by the DELAY_LINE_SIZE_MASK.
@@ -673,13 +653,13 @@ void DELFX_PROCESS(float *xn, uint32_t frames)
 
       
 
-      chorusRight = (delayLineSig_L1 + delayLineSig_R1 + delayLineSig_L3 + delayLineSig_R3);
-      chorusLeft = (delayLineSig_L2 + delayLineSig_R2 + delayLineSig_L4 + delayLineSig_R4);
+      chorusRight = (delayLineSig_L2 + delayLineSig_L4  );
+      chorusLeft = (delayLineSig_L1  + delayLineSig_L3 );
 
 
       //chorusRight = 0;
-      reverbLeft = (delayLineSig_L5  + delayLineSig_R5  + delayLineSig_L7 + delayLineSig_R7)*reverb_mix;
-      reverbRight = (delayLineSig_L6 + delayLineSig_R6 +  (delayLineSig_L8/2 ) + (delayLineSig_R8/2 ) )*reverb_mix;
+      reverbLeft = (delayLineSig_L5    + delayLineSig_L7 )*reverb_mix;
+      reverbRight = (delayLineSig_L6  +  (delayLineSig_L8/2 ) )*reverb_mix;
 
 
       // reverbRight = (delayLineSig_R3 + delayLineSig_L3 + delayLineSig_R4 + delayLineSig_L4)*0.5;
@@ -687,12 +667,14 @@ void DELFX_PROCESS(float *xn, uint32_t frames)
       // chorusRight = (delayLineSig_R7  +  delayLineSig_L7 + delayLineSig_R8  + delayLineSig_L8);
       
       // That is, the input signal * the dry level + (mixed with) the delayed signal * the wet level.
-      sigOutL = sigInL * dry + highpass((reverbLeft + chorusLeft)*wet);
+      //sigOutL = sigInL * dry + highpass((reverbLeft + chorusLeft)*wet) +(sigInR*wet);
+      sigOutL = sigInL * dry + (reverbLeft + chorusLeft)*wet +(sigInR*wet);
       //sigOutL = sigInL * dry + (reverbLeft)*wet;
      // sigOutL =  (reverbLeft + chorusLeft)*wet;
 
       // And again for the right channel
-      sigOutR = sigInR * dry + highpass((reverbRight + chorusRight)*wet);
+      //sigOutR = sigInR * dry + highpass((reverbRight + chorusRight)*wet) + (sigInL*wet);
+      sigOutR = sigInR * dry + (reverbRight + chorusRight)*wet +(sigInR*wet);
       //sigOutR = sigInR * dry + (reverbRight)*wet;
       //sigOutR = (reverbRight + chorusRight)*wet;
 
@@ -757,7 +739,7 @@ void DELFX_PARAM(uint8_t index, int32_t value)
          // Just store this value for the DSP loop to use.
 
       wet_mix = valf;
-      dry = 1.0f - wet_mix; 
+      dry = 1.0f - (wet_mix*0.25); 
       wet = wet_mix;   
 
           
